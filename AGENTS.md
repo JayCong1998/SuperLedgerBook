@@ -6,7 +6,11 @@
 ## 开发规范
 - 使用 TypeScript，确保类型安全
 - 组件使用函数式组件 + Hooks
-- 使用 Tailwind CSS 编写样式
+- 使用 Tailwind CSS 和 Ant Design React编写样式
+- 图标库使用 Lucide React
+- 图表库使用 ECharts
+- 状态管理使用 React Context API + useReducer
+- 路由管理使用 React Router
 - 所有数据存储在 Supabase
 - 每次有数据库结构或基础数据更新时都同步修改到design/database.sql
 

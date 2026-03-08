@@ -1,33 +1,38 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../services/supabase'
 import { useAuth } from '../../contexts/AuthContext'
-import { Calendar, Plus, Minus, Utensils, Car, ShoppingBag, Film, Heart, Book, Home as HomeIcon, MoreHorizontal, DollarSign, Gift, TrendingUp } from 'lucide-react'
-import DatePicker from 'react-datepicker'
-import 'react-datepicker/dist/react-datepicker.css'
+import { transactionApi } from '../../services/api/transactions'
+import { Plus, Minus, Car, ShoppingBag, Film, Heart, Book, Home, MoreHorizontal, DollarSign, Gift, TrendingUp, Coffee } from 'lucide-react'
+import { Button, Input, DatePicker, Card, Form, Alert, Typography, Radio, Space } from 'antd'
+import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
+import { getCategoriesByType } from '../../constants/categories'
+
+// 设置 dayjs 语言为中文
+dayjs.locale('zh-cn')
 
 const AddTransaction = () => {
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense')
   const [amount, setAmount] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const [date, setDate] = useState(new Date())
+  const [date, setDate] = useState(dayjs())
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [categories, setCategories] = useState<any[]>([])
   const navigate = useNavigate()
   const { user } = useAuth()
 
   // 图标映射函数
   const getIconComponent = (iconName: string) => {
     const iconMap: Record<string, React.ReactNode> = {
-      'utensils': <Utensils size={20} />,
+      'coffee': <Coffee size={20} />,
+      'utensils': <Coffee size={20} />,
       'car': <Car size={20} />,
       'shopping-bag': <ShoppingBag size={20} />,
       'film': <Film size={20} />,
       'heart': <Heart size={20} />,
       'book': <Book size={20} />,
-      'home': <HomeIcon size={20} />,
+      'home': <Home size={20} />,
       'more-horizontal': <MoreHorizontal size={20} />,
       'dollar-sign': <DollarSign size={20} />,
       'gift': <Gift size={20} />,
@@ -36,33 +41,10 @@ const AddTransaction = () => {
     return iconMap[iconName] || <MoreHorizontal size={20} />
   }
 
-  // 加载分类列表
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('categories')
-          .select('id, name, icon, type')
-          .order('name', { ascending: true })
-        
-        if (error) {
-          throw error
-        }
-        
-        setCategories(data)
-      } catch (error) {
-        console.error('加载分类失败:', error)
-      }
-    }
-
-    loadCategories()
-  }, [])
-
   // 过滤当前交易类型的分类
-  const filteredCategories = categories.filter(category => category.type === transactionType)
+  const filteredCategories = getCategoriesByType(transactionType)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     setLoading(true)
     setError('')
 
@@ -86,16 +68,14 @@ const AddTransaction = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .insert({
-          amount: parseFloat(amount),
-          type: transactionType,
-          category_id: categoryId,
-          date: date.toISOString().split('T')[0],
-          note,
-          user_id: user.id
-        })
+      const { error } = await transactionApi.createTransaction({
+        amount: parseFloat(amount),
+        type: transactionType,
+        category_id: categoryId,
+        date: date.format('YYYY-MM-DD'),
+        note,
+        user_id: user.id
+      })
 
       if (error) {
         throw error
@@ -110,125 +90,142 @@ const AddTransaction = () => {
     }
   }
 
+  const { Title } = Typography
+
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">添加交易</h2>
-      </div>
-      
-      <div className="bg-white rounded-2xl shadow-md p-6">
+      <Title level={2}>添加交易</Title>
+    
+      <Card>
         {/* 错误提示 */}
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-            {error}
-          </div>
+          <Alert 
+            message={error} 
+            type="error" 
+            showIcon 
+            className="mb-4"
+          />
         )}
         
-        <form onSubmit={handleSubmit}>
+        <Form onFinish={handleSubmit}>
           {/* 交易类型选择 */}
-          <div className="flex mb-6 rounded-xl overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setTransactionType('income')}
-              className={`flex-1 py-3 font-medium transition-colors ${transactionType === 'income' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}`}
+          <Form.Item className="mb-6">
+            <Radio.Group 
+              value={transactionType} 
+              onChange={(e) => setTransactionType(e.target.value as 'income' | 'expense')}
+              className="w-full"
+              optionType="button"
+              buttonStyle="solid"
+              size="large"
             >
-              <div className="flex items-center justify-center space-x-2">
-                <Plus size={18} />
-                <span>收入</span>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTransactionType('expense')}
-              className={`flex-1 py-3 font-medium transition-colors ${transactionType === 'expense' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}
-            >
-              <div className="flex items-center justify-center space-x-2">
-                <Minus size={18} />
-                <span>支出</span>
-              </div>
-            </button>
-          </div>
+              <Space direction="horizontal" style={{ width: '100%' }}>
+                <Radio.Button value="income" className="flex-1">
+                  <Space size="middle">
+                    <Plus size={18} />
+                    <span className="text-lg font-medium">收入</span>
+                  </Space>
+                </Radio.Button>
+                <Radio.Button value="expense" className="flex-1">
+                  <Space size="middle">
+                    <Minus size={18} />
+                    <span className="text-lg font-medium">支出</span>
+                  </Space>
+                </Radio.Button>
+              </Space>
+            </Radio.Group>
+          </Form.Item>
           
           {/* 金额输入 */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">金额</label>
-            <div className="relative">
-              <span className="absolute top-1/2 left-4 transform -translate-y-1/2 text-gray-500 text-xl">¥</span>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 text-2xl border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-                required
-              />
-            </div>
-          </div>
+          <Form.Item 
+            label="金额" 
+            className="mb-6"
+            rules={[
+              { required: true, message: '请输入金额' },
+              { pattern: /^\d+(\.\d{1,2})?$/, message: '请输入有效的金额' }
+            ]}
+          >
+            <Input
+              prefix="¥"
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              size="large"
+              style={{ fontSize: '1.5rem' }}
+            />
+          </Form.Item>
           
           {/* 分类选择 */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">分类</label>
+          <Form.Item 
+            label="分类" 
+            className="mb-6"
+            rules={[{ required: true, message: '请选择分类' }]}
+          >
             <div className="grid grid-cols-4 gap-3">
               {filteredCategories.map((category) => (
-                <button
+                <Button
                   key={category.id}
-                  type="button"
+                  type={categoryId === category.id ? 'primary' : 'default'}
                   onClick={() => setCategoryId(category.id)}
-                  className={`flex flex-col items-center p-3 rounded-lg transition-colors ${categoryId === category.id ? 'bg-primary text-white' : 'bg-gray-100 text-gray-800'}`}
+                  className={`flex flex-col items-center p-3 rounded-lg transition-all duration-200 ${categoryId === category.id ? 'bg-primary text-white shadow-md' : 'bg-white border border-gray-200 hover:bg-gray-50'}`}
+                  style={{ height: '100px' }}
                 >
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${categoryId === category.id ? 'bg-white text-primary' : 'bg-gray-100 text-gray-600'}`}>
                     {getIconComponent(category.icon)}
                   </div>
                   <span className="text-xs text-center">{category.name}</span>
-                </button>
+                </Button>
               ))}
             </div>
-          </div>
+          </Form.Item>
           
           {/* 日期选择 */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">日期</label>
-            <div className="relative">
-              <DatePicker
-                selected={date}
-                onChange={(date) => setDate(date || new Date())}
-                dateFormat="yyyy-MM-dd"
-                className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
-                popperPlacement="bottom-start"
-                todayButton="今天"
-                showMonthDropdown
-                showYearDropdown
-                dropdownMode="select"
-              />
-              <Calendar size={20} className="absolute top-1/2 left-4 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
-          </div>
+          <Form.Item 
+            label="日期" 
+            className="mb-6"
+            rules={[{ required: true, message: '请选择日期' }]}
+          >
+            <DatePicker
+              value={date}
+              onChange={(date) => setDate(date || dayjs())}
+              format="YYYY-MM-DD"
+              style={{ width: '100%' }}
+              size="large"
+              allowClear={false}
+              className="rounded-lg"
+            />
+          </Form.Item>
           
           {/* 备注 */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">备注</label>
-            <textarea
+          <Form.Item label="备注" className="mb-6">
+            <Input.TextArea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="w-full py-4 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-colors resize-none"
               rows={3}
               placeholder="添加备注..."
-            ></textarea>
-          </div>
+              size="large"
+              className="rounded-lg"
+            />
+          </Form.Item>
           
           {/* 提交按钮 */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
-          >
-            {loading ? '保存中...' : '保存'}
-          </button>
-        </form>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={loading}
+              block
+              size="large"
+              className="rounded-lg py-4 text-lg font-medium transition-all duration-200 hover:shadow-lg"
+            >
+              {loading ? '保存中...' : '保存'}
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
       </div>
-    </div>
   )
 }
 

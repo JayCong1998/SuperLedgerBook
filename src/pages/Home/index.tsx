@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
-import { Plus, TrendingUp, TrendingDown, Wallet, Calendar, Utensils, Car, ShoppingBag, Film, Heart, Book, Home as HomeIcon, MoreHorizontal, DollarSign, Gift } from 'lucide-react'
+import { Plus, TrendingUp, TrendingDown, Wallet, Calendar, Car, ShoppingBag, Film, Heart, Book, Home as HomeIcon, MoreHorizontal, DollarSign, Gift, Coffee } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabase'
 import { useState, useEffect } from 'react'
+import { CATEGORIES } from '../../constants/categories'
 
 const Home = () => {
   const { user } = useAuth()
@@ -19,7 +20,8 @@ const Home = () => {
   // 图标映射函数
   const getIconComponent = (iconName: string) => {
     const iconMap: Record<string, React.ReactNode> = {
-      'utensils': <Utensils size={20} />,
+      'coffee': <Coffee size={20} />,
+      'utensils': <Coffee size={20} />,
       'car': <Car size={20} />,
       'shopping-bag': <ShoppingBag size={20} />,
       'film': <Film size={20} />,
@@ -44,23 +46,44 @@ const Home = () => {
     const loadData = async () => {
       try {
         // 计算当月的开始和结束日期
-        const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0]
-        const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0]
+        const now = new Date()
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+
+        console.log('查询参数:', {
+          user_id: user.id,
+          startOfMonth,
+          endOfMonth
+        })
 
         // 获取交易记录
         const { data: transactionData, error: transactionError } = await supabase
           .from('transactions')
-          .select('*, categories(name, icon)')
+          .select('*')
           .eq('user_id', user.id)
           .gte('date', startOfMonth)
           .lte('date', endOfMonth)
           .order('date', { ascending: false })
 
+        console.log('查询结果:', {
+          data: transactionData,
+          error: transactionError
+        })
+
         if (transactionError) {
           throw transactionError
         }
 
-        setTransactions(transactionData || [])
+        // 为交易数据添加分类信息
+        const transactionsWithCategory = (transactionData || []).map((transaction: any) => {
+          const category = CATEGORIES.find((c: any) => c.id === transaction.category_id)
+          return {
+            ...transaction,
+            categories: category || { name: '未知分类', icon: 'more-horizontal' }
+          }
+        })
+
+        setTransactions(transactionsWithCategory)
 
         // 计算收支总额
         let income = 0
@@ -84,7 +107,7 @@ const Home = () => {
     }
 
     loadData()
-  }, [user, currentDate])
+  }, [user])
 
   return (
     <div className="container mx-auto px-4 py-6">

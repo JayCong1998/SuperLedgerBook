@@ -1,7 +1,7 @@
 import { supabase } from '../supabase'
 
 export const transactionApi = {
-  getTransactions: async (params?: { startDate?: string; endDate?: string; categoryId?: string }) => {
+  getTransactions: async (params?: { startDate?: string; endDate?: string; categoryId?: string; userId?: string }) => {
     let query = supabase.from('transactions').select('*')
 
     if (params?.startDate) {
@@ -16,6 +16,10 @@ export const transactionApi = {
       query = query.eq('category_id', params.categoryId)
     }
 
+    if (params?.userId) {
+      query = query.eq('user_id', params.userId)
+    }
+
     const { data, error } = await query.order('date', { ascending: false })
     return { data, error }
   },
@@ -26,6 +30,7 @@ export const transactionApi = {
     category_id: string
     date: string
     note?: string
+    user_id: string
   }) => {
     const { data: transaction, error } = await supabase
       .from('transactions')
