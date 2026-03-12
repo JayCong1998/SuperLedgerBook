@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { HomeOutlined, PlusOutlined, BarChartOutlined, SettingOutlined, UserOutlined, LogoutOutlined, MenuOutlined, CloseOutlined, DownOutlined } from '@ant-design/icons'
 import { useAuth } from '../../contexts/AuthContext'
+import { useTheme } from '../../contexts/ThemeContext'
 import { Dropdown, Button } from 'antd'
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const location = useLocation()
   const { user, signOut } = useAuth()
+  const { isDarkMode } = useTheme()
   
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || '用户'
   const userInitial = username.charAt(0).toUpperCase()
@@ -106,12 +108,13 @@ const Header = () => {
       
       {/* 移动端菜单 */}
       {mobileMenuOpen && (
-        <div className="mobile-menu">
+        <div className={`mobile-menu ${isDarkMode ? 'dark:bg-dark-bg dark:text-dark-text' : ''}`}>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-primary">菜单</h2>
             <Button 
               type="text" 
               icon={<CloseOutlined />} 
+              className={isDarkMode ? 'text-white' : ''}
               onClick={() => setMobileMenuOpen(false)}
             />
           </div>
@@ -124,8 +127,8 @@ const Header = () => {
                   <span className="text-lg font-bold">{userInitial}</span>
                 </div>
                 <div>
-                  <p className="font-bold text-gray-800">{username}</p>
-                  <p className="text-sm text-gray-600">{user.email}</p>
+                  <p className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{username}</p>
+                  <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{user.email}</p>
                 </div>
               </div>
             </div>
@@ -138,28 +141,28 @@ const Header = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center space-x-3 p-3 rounded-lg ${location.pathname === item.path ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-gray-100'}`}
+                  className={`flex items-center space-x-3 p-3 rounded-lg ${location.pathname === item.path ? 'bg-primary/10 text-primary font-bold' : isDarkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-100'}`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <Icon />
-                  <span className="text-lg">{item.label}</span>
+                  <span className={`text-lg ${isDarkMode ? 'text-white' : ''}`}>{item.label}</span>
                 </Link>
               )
             })}
             
             {user ? (
               <>
-                <hr className="my-2" />
+                <hr className={isDarkMode ? 'border-gray-700' : 'border-gray-200'} />
                 <Button
                   type="text"
                   icon={<LogoutOutlined />}
-                  className="flex items-center justify-start space-x-3 p-3 rounded-lg hover:bg-gray-100 text-red-600"
+                  className={`flex items-center justify-start space-x-3 p-3 rounded-lg ${isDarkMode ? 'hover:bg-gray-800/50 text-red-400' : 'hover:bg-gray-100 text-red-600'}`}
                   onClick={async () => {
                     await handleSignOut()
                     setMobileMenuOpen(false)
                   }}
                 >
-                  <span className="text-lg">退出登录</span>
+                  <span className={`text-lg ${isDarkMode ? 'text-white' : ''}`}>退出登录</span>
                 </Button>
               </>
             ) : (
@@ -177,14 +180,14 @@ const Header = () => {
       )}
       
       {/* 移动端底部导航 */}
-      <div className="bottom-nav">
+      <div className={`bottom-nav ${isDarkMode ? 'dark:bg-dark-card dark:text-white' : ''}`}>
         {navItems.slice(0, 4).map((item) => {
           const Icon = item.icon
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center ${location.pathname === item.path ? 'text-primary' : 'text-gray-600'}`}
+              className={`flex flex-col items-center ${location.pathname === item.path ? 'text-primary' : isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}
             >
               <Icon />
               <span className="text-xs mt-1">{item.label}</span>
